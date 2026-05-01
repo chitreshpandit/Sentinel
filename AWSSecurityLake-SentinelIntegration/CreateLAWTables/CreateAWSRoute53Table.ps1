@@ -10,7 +10,7 @@ $tableParams = @'
 {
     "properties": {
         "schema": {
-            "name": "AWSRoute53_CL",
+            "name": "AWSRoute53Logs_CL",
             "columns": [
                 { "name": "AccountId", "type": "string", "description": "AWS account ID that owns the VPC which issued the DNS query." },
                 { "name": "ActionId", "type": "string", "description": "Action identifier extracted from the log record." },
@@ -54,7 +54,7 @@ $tableParams = @'
 
 
 $restMethodParams = @{
-    Path    = "<LAW RESOURCE ID HERE>/tables/AWSRoute53_CL?api-version=2025-07-01"
+    Path    = "<LAW RESOURCE ID HERE>/tables/AWSRoute53Logs_CL?api-version=2025-07-01"
     Method  = "PUT"
     Payload = $tableParams}
 

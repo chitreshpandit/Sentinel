@@ -1,0 +1,101 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "dataCollectionRuleName": {
+            "type": "String",
+            "metadata": {
+                "description": "Name of the Data Collection Rule."
+            }
+        },
+        "dataCollectionEndpointResourceId": {
+            "type": "String",
+            "metadata": {
+                "description": "Resource ID of the Data Collection Endpoint."
+            }
+        },
+        "logAnalyticsWorkspaceResourceId": {
+            "type": "String",
+            "metadata": {
+                "description": "Resource ID of the target Log Analytics workspace."
+            }
+        },
+        "userAssignedIdentityResourceId": {
+            "type": "String",
+            "metadata": {
+                "description": "Resource ID of the user-assigned managed identity to attach to the DCR."
+            }
+        },
+        "eventHubConsumerGroup": {
+            "type": "String",
+            "metadata": {
+                "description": "Event Hub consumer group for this stream."
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Insights/dataCollectionRules",
+            "apiVersion": "2023-03-11",
+            "name": "[parameters('dataCollectionRuleName')]",
+            "location": "[resourceGroup().location]",
+            "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                    "[parameters('userAssignedIdentityResourceId')]": {}
+                }
+            },
+            "properties": {
+                "dataCollectionEndpointId": "[parameters('dataCollectionEndpointResourceId')]",
+                "streamDeclarations": {
+                    "Custom-EventHubStreamAWSS3AccessLogs": {
+                        "columns": [
+                            {
+                                "name": "TimeGenerated",
+                                "type": "datetime"
+                            },
+                            {
+                                "name": "RawData",
+                                "type": "string"
+                            },
+                            {
+                                "name": "Properties",
+                                "type": "dynamic"
+                            }
+                        ]
+                    }
+                },
+                "dataSources": {
+                    "dataImports": {
+                        "eventHub": {
+                            "name": "eventHubDataSource1",
+                            "consumerGroup": "[parameters('eventHubConsumerGroup')]",
+                            "stream": "Custom-EventHubStreamAWSS3AccessLogs"
+                        }
+                    }
+                },
+                "destinations": {
+                    "logAnalytics": [
+                        {
+                            "workspaceResourceId": "[parameters('logAnalyticsWorkspaceResourceId')]",
+                            "name": "logAnalyticsDestination1"
+                        }
+                    ]
+                },
+                "dataFlows": [
+                    {
+                        "streams": [
+                            "Custom-EventHubStreamAWSS3AccessLogs"
+                        ],
+                        "destinations": [
+                            "logAnalyticsDestination1"
+                        ],
+                        "transformKql": "source | extend d = parse_json(RawData) |extend  Data_=tostring( d.api.request.data) | extend  RequestDataParsed = parse_json(Data_)| project TimeGenerated = todatetime(d.time_dt),BucketOwner=tostring(d.resources[0].owner.account.uid),Bucket=tostring(d.resources[0].uid),RemoteIp=tostring(d.src_endpoint.ip),Requester=tostring(d.actor.invoked_by),RequestId=tostring(d.api.request.uid),Operation=tostring(d.api.operation),Key=tostring(RequestDataParsed.key),RequestUri=tostring(RequestDataParsed.Host),ErrorCode=tostring(d.api.response.error),UserAgent=tostring(d.http_request.user_agent),HostHeader=tostring(RequestDataParsed.Host),ACLRequired= tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(d.api)).request)).data)).['x-amz-acl']),Status = tostring(d.status), TypeName = tostring(d.type_name), UserARN = tostring(d.actor.user.uid), UserARNAlt = tostring(d.actor.user.account.uid_alt), UserAccountId = tostring(d.actor.user.account.uid),BucketAccountId = tostring(d.resources[0].owner.account.uid), ResponseMessage = tostring(d.api.response.message), ResponseError = tostring(d.api.response.error),ClassName=tostring(d.class_name),CategoryName=tostring(d.category_name),ActivityName = tostring(d.activity_name),RawData",
+                        "outputStream": "Custom-AWSS3ServerAccessLogs_CL"
+                    }
+                ]
+            }
+        }
+    ]
+}

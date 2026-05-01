@@ -1,0 +1,101 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "dataCollectionRuleName": {
+            "type": "String",
+            "metadata": {
+                "description": "Name of the Data Collection Rule."
+            }
+        },
+        "dataCollectionEndpointResourceId": {
+            "type": "String",
+            "metadata": {
+                "description": "Resource ID of the Data Collection Endpoint."
+            }
+        },
+        "logAnalyticsWorkspaceResourceId": {
+            "type": "String",
+            "metadata": {
+                "description": "Resource ID of the target Log Analytics workspace."
+            }
+        },
+        "userAssignedIdentityResourceId": {
+            "type": "String",
+            "metadata": {
+                "description": "Resource ID of the user-assigned managed identity to attach to the DCR."
+            }
+        },
+        "eventHubConsumerGroup": {
+            "type": "String",
+            "metadata": {
+                "description": "Event Hub consumer group for this stream."
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Insights/dataCollectionRules",
+            "apiVersion": "2023-03-11",
+            "name": "[parameters('dataCollectionRuleName')]",
+            "location": "[resourceGroup().location]",
+            "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                    "[parameters('userAssignedIdentityResourceId')]": {}
+                }
+            },
+            "properties": {
+                "dataCollectionEndpointId": "[parameters('dataCollectionEndpointResourceId')]",
+                "streamDeclarations": {
+                    "Custom-EventHubStreamAWSK8s": {
+                        "columns": [
+                            {
+                                "name": "TimeGenerated",
+                                "type": "datetime"
+                            },
+                            {
+                                "name": "RawData",
+                                "type": "string"
+                            },
+                            {
+                                "name": "Properties",
+                                "type": "dynamic"
+                            }
+                        ]
+                    }
+                },
+                "dataSources": {
+                    "dataImports": {
+                        "eventHub": {
+                            "name": "eventHubDataSource1",
+                            "consumerGroup": "[parameters('eventHubConsumerGroup')]",
+                            "stream": "Custom-EventHubStreamAWSK8s"
+                        }
+                    }
+                },
+                "destinations": {
+                    "logAnalytics": [
+                        {
+                            "workspaceResourceId": "[parameters('logAnalyticsWorkspaceResourceId')]",
+                            "name": "logAnalyticsDestination1"
+                        }
+                    ]
+                },
+                "dataFlows": [
+                    {
+                        "streams": [
+                            "Custom-EventHubStreamAWSK8s"
+                        ],
+                        "destinations": [
+                            "logAnalyticsDestination1"
+                        ],
+                        "transformKql": "source | extend _d=parse_json(RawData) | extend EventEpochTime= tolong(_d.['time']) | extend EventTimeUtc=todatetime(_d.time_dt) | extend Operation=tostring(_d.api.operation), ApiVersion=tostring(_d.api.version), ApiGroup=tostring(_d.api.group.name), ResponseCode=toint(_d.api.response.code), Message=tostring(_d.message), UrlPath=tostring(_d.http_request.url.path), UserAgent=tostring(_d.http_request.user_agent) | extend ActorName=tostring(_d.actor.user.name), ActorUid=tostring(_d.actor.user.uid), ActorTypeId=toint(_d.actor.user.type_id) | extend SrcIp=tostring(_d.src_endpoint.ip), CloudProvider=tostring(_d.cloud.provider) | extend _r0= _d.resources[0] | extend Resources=_d.resources | extend EKSNamespace=tostring(_r0.namespace), EKSResourceType=tostring(_r0.type), EKSResourceName=tostring(_r0.name), EKSResourceUid=tostring(_r0.uid), EKSResourceVersion=tostring(_r0.version) | extend Unmapped=_d.unmapped, Observables=_d.observables | project TimeGenerated=EventTimeUtc, EventEpochTime, Resources, Operation, ResponseCode, Message, UrlPath, UserAgent, ApiGroup, ApiVersion, ActorName, ActorUid, ActorTypeId, SrcIp, CloudProvider, EKSNamespace, EKSResourceType, EKSResourceName, EKSResourceUid, EKSResourceVersion, Unmapped, Observables, RawData",
+                        "outputStream": "Custom-AWSEKSLogs_CL"
+                    }
+                ]
+            }
+        }
+    ]
+}

@@ -1,0 +1,101 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "dataCollectionRuleName": {
+            "type": "String",
+            "metadata": {
+                "description": "Name of the Data Collection Rule."
+            }
+        },
+        "dataCollectionEndpointResourceId": {
+            "type": "String",
+            "metadata": {
+                "description": "Resource ID of the Data Collection Endpoint."
+            }
+        },
+        "logAnalyticsWorkspaceResourceId": {
+            "type": "String",
+            "metadata": {
+                "description": "Resource ID of the target Log Analytics workspace."
+            }
+        },
+        "userAssignedIdentityResourceId": {
+            "type": "String",
+            "metadata": {
+                "description": "Resource ID of the user-assigned managed identity to attach to the DCR."
+            }
+        },
+        "eventHubConsumerGroup": {
+            "type": "String",
+            "metadata": {
+                "description": "Event Hub consumer group for this stream."
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Insights/dataCollectionRules",
+            "apiVersion": "2023-03-11",
+            "name": "[parameters('dataCollectionRuleName')]",
+            "location": "[resourceGroup().location]",
+            "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                    "[parameters('userAssignedIdentityResourceId')]": {}
+                }
+            },
+            "properties": {
+                "dataCollectionEndpointId": "[parameters('dataCollectionEndpointResourceId')]",
+                "streamDeclarations": {
+                    "Custom-EventHubStreamAWSWAF": {
+                        "columns": [
+                            {
+                                "name": "TimeGenerated",
+                                "type": "datetime"
+                            },
+                            {
+                                "name": "RawData",
+                                "type": "string"
+                            },
+                            {
+                                "name": "Properties",
+                                "type": "dynamic"
+                            }
+                        ]
+                    }
+                },
+                "dataSources": {
+                    "dataImports": {
+                        "eventHub": {
+                            "name": "eventHubDataSource1",
+                            "consumerGroup": "[parameters('eventHubConsumerGroup')]",
+                            "stream": "Custom-EventHubStreamAWSWAF"
+                        }
+                    }
+                },
+                "destinations": {
+                    "logAnalytics": [
+                        {
+                            "workspaceResourceId": "[parameters('logAnalyticsWorkspaceResourceId')]",
+                            "name": "logAnalyticsDestination1"
+                        }
+                    ]
+                },
+                "dataFlows": [
+                    {
+                        "streams": [
+                            "Custom-EventHubStreamAWSWAF"
+                        ],
+                        "destinations": [
+                            "logAnalyticsDestination1"
+                        ],
+                        "transformKql": "source | extend d = parse_json(RawData) | project TimeGenerated = todatetime(d.time_dt),Action = tostring(d.action),  WebAclId= tostring(d.metadata.product.feature.uid),FormatVersion=tostring(d.metadata.product.version),Labels=todynamic(d.metadata.labels),HttpSourceName=tostring(d.src_endpoint.svc_name),HttpSourceId=tostring(d.src_endpoint.uid),ClientIp = tostring(d.src_endpoint.ip),Country=tostring(d.src_endpoint.location.country),Uri=tostring(d.http_request.url.path),DomainName = tostring(d.http_request.url.hostname),HttpVersion=tostring(d.http_request.version),HttpMethod=tostring(d.http_request.http_method),RequestId=tostring(d.http_request.uid),Args = tostring(d.http_request.args),TerminatingRuleId=tostring(d.firewall_rule.uid),TerminatingRuleType=tostring(d.firewall_rule.type),TerminatingRuleMatchDetails=todynamic(d.firewall_rule.match_details),TerminatingRuleMatchDetailsLocation=tostring(d.firewall_rule.match_location),TerminatingRuleMatchDetailsConditionType=tostring(d.firewall_rule.condition),UserAgent=tostring(d.http_request.user_agent),RawData",
+                        "outputStream": "Custom-AWSWAFEvents_CL"
+                    }
+                ]
+            }
+        }
+    ]
+}

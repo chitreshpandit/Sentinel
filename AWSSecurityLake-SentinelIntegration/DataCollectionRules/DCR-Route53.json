@@ -1,0 +1,101 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "dataCollectionRuleName": {
+            "type": "String",
+            "metadata": {
+                "description": "Name of the Data Collection Rule."
+            }
+        },
+        "dataCollectionEndpointResourceId": {
+            "type": "String",
+            "metadata": {
+                "description": "Resource ID of the Data Collection Endpoint."
+            }
+        },
+        "logAnalyticsWorkspaceResourceId": {
+            "type": "String",
+            "metadata": {
+                "description": "Resource ID of the target Log Analytics workspace."
+            }
+        },
+        "userAssignedIdentityResourceId": {
+            "type": "String",
+            "metadata": {
+                "description": "Resource ID of the user-assigned managed identity to attach to the DCR."
+            }
+        },
+        "eventHubConsumerGroup": {
+            "type": "String",
+            "metadata": {
+                "description": "Event Hub consumer group for this stream."
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Insights/dataCollectionRules",
+            "apiVersion": "2023-03-11",
+            "name": "[parameters('dataCollectionRuleName')]",
+            "location": "[resourceGroup().location]",
+            "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                    "[parameters('userAssignedIdentityResourceId')]": {}
+                }
+            },
+            "properties": {
+                "dataCollectionEndpointId": "[parameters('dataCollectionEndpointResourceId')]",
+                "streamDeclarations": {
+                    "Custom-EventHubStreamAWSRoute53": {
+                        "columns": [
+                            {
+                                "name": "TimeGenerated",
+                                "type": "datetime"
+                            },
+                            {
+                                "name": "RawData",
+                                "type": "string"
+                            },
+                            {
+                                "name": "Properties",
+                                "type": "dynamic"
+                            }
+                        ]
+                    }
+                },
+                "dataSources": {
+                    "dataImports": {
+                        "eventHub": {
+                            "name": "eventHubDataSource1",
+                            "consumerGroup": "[parameters('eventHubConsumerGroup')]",
+                            "stream": "Custom-EventHubStreamAWSRoute53"
+                        }
+                    }
+                },
+                "destinations": {
+                    "logAnalytics": [
+                        {
+                            "workspaceResourceId": "[parameters('logAnalyticsWorkspaceResourceId')]",
+                            "name": "logAnalyticsDestination1"
+                        }
+                    ]
+                },
+                "dataFlows": [
+                    {
+                        "streams": [
+                            "Custom-EventHubStreamAWSRoute53"
+                        ],
+                        "destinations": [
+                            "logAnalyticsDestination1"
+                        ],
+                        "transformKql": "source| extend d = parse_json(RawData) | project TimeGenerated=todatetime(d.time_dt),EventEpochTime=tolong(d.['time']),AccountId = tostring(d.cloud.account.uid),LogType=tostring(d.type_name),Region=tostring(d.cloud.region),VpcId=tostring(d.src_endpoint.vpc_uid), ActionId= tostring(d.action_id), ActivityId=tostring(d.activity_id),ActivityName=tostring(d.activity_name),QueryName=tostring(d.query.hostname),QueryType=tostring(d.query.type),QueryClass=tostring(d.query.class),Rcode=tostring(d.rcode),RcodeId=tostring(d.rcode_id),Answers=todynamic(d.answers),SrcAddr=tostring(d.src_endpoint.ip),SrcPort=tostring(d.src_endpoint.port),Transport=tostring(d.connection_info.protocol_name),SrcIds=todynamic(d.src_endpoint.instance_uid),FirewallRule = tostring(d.firewall_rule),CategoryName=tostring(d.category_name),ClassName = tostring(d.class_name),Direction = tostring(d.connection_info.direction),DirectionId = tostring(d.connection_info.direction_id),DstEndpoint = tostring(d.dst_endpoint),Observables = todynamic(d.observables),RawData",
+                        "outputStream": "Custom-AWSRoute53Logs_CL"
+                    }
+                ]
+            }
+        }
+    ]
+}
