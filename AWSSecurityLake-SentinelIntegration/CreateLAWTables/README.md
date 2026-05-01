@@ -112,22 +112,6 @@ The script performs the following:
 
 ---
 
-## 📊 Optional – Screenshots (Recommended for README)
-
-You can enhance this README by adding:
-
-- Azure Portal → Log Analytics Workspace → Tables view
-- Custom table creation success
-- Data ingestion validation in Logs
-
-Example (add images):
-```markdown
-![Table Created](./images/table-created.png)
-![Logs View](./images/logs-view.png)
-```
-
----
-
 ## ✅ Output
 
 After successful execution:
