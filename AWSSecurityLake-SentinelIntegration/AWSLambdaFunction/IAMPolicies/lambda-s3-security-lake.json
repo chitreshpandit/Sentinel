@@ -1,0 +1,20 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowSecurityLakeObjectRead",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:HeadObject"
+            ],
+            "Resource": "arn:aws:s3:::aws-security-data-lake-<YOUR_REGION>-*/*"
+        },
+        {
+            "Sid": "AllowSecurityLakeMetadataWrite",
+            "Effect": "Allow",
+            "Action": "s3:CopyObject",
+            "Resource": "arn:aws:s3:::aws-security-data-lake-<YOUR_REGION>-*/*"
+        }
+    ]
+}
