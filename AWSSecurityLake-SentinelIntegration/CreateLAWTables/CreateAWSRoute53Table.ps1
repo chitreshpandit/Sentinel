@@ -1,9 +1,9 @@
 
 # Step 1: Login to Azure (opens browser)
-#Connect-AzAccount
+Connect-AzAccount
 
 # Optional: set subscription explicitly (good practice)
-Set-AzContext -SubscriptionId "6874b9d3-0bbe-43fd-9182-ec44214b1b4d"
+Set-AzContext -SubscriptionId "<SUBSCRIPTION ID HERE>"
 
 
 $tableParams = @'
@@ -54,7 +54,7 @@ $tableParams = @'
 
 
 $restMethodParams = @{
-    Path    = "/subscriptions/6874b9d3-0bbe-43fd-9182-ec44214b1b4d/resourcegroups/chitpa-sentinel-rg-01/providers/microsoft.operationalinsights/workspaces/sentinel-ws-sea-01/tables/AWSRoute53_CL?api-version=2025-07-01"
+    Path    = "<LAW RESOURCE ID HERE>/tables/AWSRoute53_CL?api-version=2025-07-01"
     Method  = "PUT"
     Payload = $tableParams}
 
