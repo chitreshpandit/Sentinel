@@ -56,7 +56,7 @@ Fill in the required parameters as shown below (values come from earlier setup s
 - Data Collection Endpoint Resource ID
 - Log Analytics Workspace Resource ID
 - User Assigned Identity Resource ID
-- Event Hub Consumer Group
+- Event Hub Consumer Group (we created the consumer group while creating the EventHubs)
 
 ---
 
