@@ -51,7 +51,7 @@ You can execute the provided script from:
    Connect-AzAccount
    ```
 
-3. Set the subscription context:
+3. Set the subscription context in the script:
    ```powershell
    Set-AzContext -SubscriptionId "<your-subscription-id>"
    ```
