@@ -81,7 +81,7 @@ You can execute the provided script from:
      # Connect-AzAccount
      ```
 
-6. Set subscription context (if needed):
+6. Set subscription context in the script (if needed):
    ```powershell
    Set-AzContext -SubscriptionId "<your-subscription-id>"
    ```
