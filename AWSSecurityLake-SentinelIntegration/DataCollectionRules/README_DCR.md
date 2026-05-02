@@ -79,6 +79,14 @@ The template performs the following:
 - Configures **KQL transformation**
 - Sends output to **Log Analytics custom table**
 
+| Data Source             | DCR Template Name        |
+|------------------------|--------------------------|
+| Amazon EKS Logs        | DCR-awseks.json          |
+| AWS S3 Access Logs     | DCR-awsS3access.json     |
+| AWS WAF Logs           | DCR-awswaf.json          |
+| AWS Lambda Execution   | DCR-lambdaexecution.json |
+| Amazon Route 53 Logs   | DCR-Route53.json         |
+
 ---
 
 ## 🔁 Data Flow Summary
